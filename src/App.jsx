@@ -24,21 +24,61 @@ export default function App() {
 
   const handleAdd = async () => {
     if (!title.trim()) return;
-    await addTodo({ title, note }); // ส่ง note ไปด้วย
+
+    // 1) สร้าง todo ใหม่ใน state ก่อน (optimistic)
+    const tempId = Date.now().toString();
+    const newTodo = { _id: tempId, title, note, completed: false };
+    setTodos((prev) => [newTodo, ...prev]);
+
     setTitle("");
-    setNote(""); // reset note หลังเพิ่ม
-    await load();
+    setNote("");
+
+    try {
+      // 2) ยิงไป backend
+      const { data } = await addTodo({ title, note });
+
+      // 3) backend return _id จริง → update state ให้ตรง
+      setTodos((prev) =>
+        prev.map((t) => (t._id === tempId ? data : t))
+      );
+    } catch {
+      // 4) ถ้า error → rollback ลบ temp todo ออก
+      setTodos((prev) => prev.filter((t) => t._id !== tempId));
+      alert("เพิ่ม Todo ไม่สำเร็จ");
+    }
   };
 
   const handleToggle = async (id) => {
-    await toggleTodo(id);
-    await load();
+    // Optimistic update
+    setTodos((prev) =>
+      prev.map((t) =>
+        t._id === id ? { ...t, completed: !t.completed } : t
+      )
+    );
+    try {
+      await toggleTodo(id);
+    } catch {
+      // rollback
+      setTodos((prev) =>
+        prev.map((t) =>
+          t._id === id ? { ...t, completed: !t.completed } : t
+        )
+      );
+      alert("เปลี่ยนสถานะไม่สำเร็จ");
+    }
   };
 
   const handleDelete = async (id) => {
     if (!confirm("ลบงานนี้ใช่ไหม?")) return;
-    await deleteTodo(id);
-    await load();
+    // Optimistic update
+    const prevTodos = todos;
+    setTodos((prev) => prev.filter((t) => t._id !== id));
+    try {
+      await deleteTodo(id);
+    } catch {
+      setTodos(prevTodos); // rollback
+      alert("ลบไม่สำเร็จ");
+    }
   };
 
   const handleRename = async (id, prev) => {
