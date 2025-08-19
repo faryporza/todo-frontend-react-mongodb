@@ -58,7 +58,7 @@ export default function App() {
           </p>
         </header>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <input
             className="flex-1 rounded-xl border px-3 py-2"
             placeholder="พิมพ์งานใหม่..."
